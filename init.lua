@@ -1,8 +1,29 @@
 compost = {}
 compost.items = {}
+compost.groups = {}
 
 function compost.register_item(name)
 	compost.items[name] = true
+end
+
+function compost.register_group(name)
+	compost.groups[name] = true
+end
+
+function compost.can_compost(name)
+	if compost.items[name] then
+		return true
+	else
+		for k, i in pairs(minetest.registered_items[name].groups) do
+			if i > 0 then
+				if compost.groups[tostring(k)] then
+					return true
+				end
+			end
+		end
+
+		return false
+	end
 end
 
 -- grass
@@ -10,11 +31,7 @@ compost.register_item("default:grass_1")
 compost.register_item("default:junglegrass")
 
 -- leaves
-compost.register_item("default:leaves")
-compost.register_item("default:jungleleaves")
-compost.register_item("default:pine_needles")
-compost.register_item("default:acacia_leaves")
-compost.register_item("default:aspen_leaves")
+compost.register_group("leaves")
 
 -- dirt
 compost.register_item("default:dirt")
@@ -34,6 +51,10 @@ compost.register_item("flowers:dandelion_white")
 compost.register_item("farming:bread")
 compost.register_item("farming:wheat")
 
+-- groups
+compost.register_group("plant")
+compost.register_group("flower")
+
 minetest.register_node("compost:wood_barrel", {
 	description = "Wood Barrel",
 	tiles = {"default_wood.png"},
@@ -52,11 +73,13 @@ minetest.register_node("compost:wood_barrel", {
 	sounds =  default.node_sound_wood_defaults(),
 	on_punch = function(pos, node, puncher, pointed_thing)
 		local wielded_item = puncher:get_wielded_item():get_name()
-		if compost.items[wielded_item] then
+		if compost.can_compost(wielded_item) then
 			minetest.set_node(pos, {name = "compost:wood_barrel_1"})
 			local w = puncher:get_wielded_item()
-			w:take_item(1)
-			puncher:set_wielded_item(w)
+			if not(minetest.setting_getbool("creative_mode")) then
+				w:take_item(1)
+				puncher:set_wielded_item(w)
+			end
 		end
 	end
 })
@@ -125,8 +148,8 @@ minetest.register_node("compost:wood_barrel_3", {
 
 minetest.register_abm({
 	nodenames = {"compost:wood_barrel_1"},
-	interval = 5.0,
-	chance = 3,
+	interval = 40,
+	chance = 5,
 	action = function(pos, node, active_object_count, active_object_count_wider)
 		minetest.set_node(pos, {name = "compost:wood_barrel_2"})
 	end,
@@ -134,8 +157,8 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"compost:wood_barrel_2"},
-	interval = 5.0,
-	chance = 3,
+	interval = 40,
+	chance = 5,
 	action = function(pos, node, active_object_count, active_object_count_wider)
 		minetest.set_node(pos, {name = "compost:wood_barrel_3"})
 	end,
@@ -170,4 +193,3 @@ minetest.register_craft({
 		{"compost:compost", "compost:compost"},
 	}
 })
-
