@@ -18,5 +18,5 @@ S : wood slab
 ## Bugs
 Report bugs on the forum topic or open a issue on GitHub.
 
-## created by
-cd2 (cdqwertz) - cdqwertz.github.io
+## Created by
+cdqwertz - cdqwertz.github.io
