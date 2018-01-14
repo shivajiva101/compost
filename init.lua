@@ -193,3 +193,32 @@ minetest.register_craft({
 		{"compost:compost", "compost:compost"},
 	}
 })
+
+if minetest.get_modpath ("tubelib") then
+	print ("[compost] found tubelib")
+
+	tubelib.register_node ("compost:wood_barrel",  {}, {
+		on_pull_item = nil,
+		on_push_item = function  (pos, side, item, player_name)
+			if compost.can_compost(item:get_name()) then
+				minetest.set_node(pos, {name = "compost:wood_barrel_1"})
+				return true
+			else
+				return false
+			end
+		end,
+		on_unpull_item = function  (pos, side, item, player_name)
+			-- TODO?
+			return false
+		end,
+	})
+
+	tubelib.register_node ("compost:wood_barrel_3",  {}, {
+		on_pull_item = function  (pos, side, player_name)
+			minetest.set_node(pos, {name = "compost:wood_barrel"})
+			return {name = "compost:compost"}
+		end,
+		on_push_item = nil,
+		on_unpull_item = nil
+	})
+end
