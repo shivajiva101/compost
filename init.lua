@@ -148,7 +148,7 @@ minetest.register_node("compost:wood_barrel_3", {
 
 minetest.register_abm({
 	nodenames = {"compost:wood_barrel_1"},
-	interval = 40,
+	interval = 30,
 	chance = 5,
 	action = function(pos, node, active_object_count, active_object_count_wider)
 		minetest.set_node(pos, {name = "compost:wood_barrel_2"})
@@ -157,8 +157,8 @@ minetest.register_abm({
 
 minetest.register_abm({
 	nodenames = {"compost:wood_barrel_2"},
-	interval = 40,
-	chance = 5,
+	interval = 30,
+	chance = 3,
 	action = function(pos, node, active_object_count, active_object_count_wider)
 		minetest.set_node(pos, {name = "compost:wood_barrel_3"})
 	end,
@@ -194,31 +194,40 @@ minetest.register_craft({
 	}
 })
 
-if minetest.get_modpath ("tubelib") then
+if minetest.get_modpath ("tubelib") and tubelib then
 	print ("[compost] found tubelib")
 
-	tubelib.register_node ("compost:wood_barrel",  {}, {
-		on_pull_item = nil,
-		on_push_item = function  (pos, side, item, player_name)
-			if compost.can_compost(item:get_name()) then
-				minetest.set_node(pos, {name = "compost:wood_barrel_1"})
-				return true
-			else
-				return false
-			end
-		end,
-		on_unpull_item = function  (pos, side, item, player_name)
-			-- TODO?
-			return false
-		end,
-	})
+	-- Thanks to @joe7575
+	tubelib.register_node ("compost:wood_barrel",  {
+			"compost:wood_barrel_1",
+			"compost:wood_barrel_2",
+			"compost:wood_barrel_3"
+		}, {
+			on_push_item = function  (pos, side, item, player_name)
+				local node = minetest.get_node (pos)
 
-	tubelib.register_node ("compost:wood_barrel_3",  {}, {
-		on_pull_item = function  (pos, side, player_name)
-			minetest.set_node(pos, {name = "compost:wood_barrel"})
-			return {name = "compost:compost"}
-		end,
-		on_push_item = nil,
-		on_unpull_item = nil
+				if node.name == "compost:wood_barrel" and compost.can_compost(item:get_name()) then
+					minetest.set_node(pos, {name = "compost:wood_barrel_1"})
+					return true
+				else
+					return false
+				end
+			end,
+
+			on_unpull_item = function  (pos, side, item, player_name)
+				minetest.set_node(pos, {name = "compost:wood_barrel_3"})
+				return true
+			end,
+
+			on_pull_item = function  (pos, side, player_name)
+				local node = minetest.get_node (pos)
+
+				if node.name == "compost:wood_barrel_3" then
+					minetest.set_node(pos, {name = "compost:wood_barrel"})
+					return ItemStack("compost:compost")
+				end
+
+				return nil
+			end,
 	})
 end

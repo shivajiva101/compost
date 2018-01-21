@@ -1,5 +1,5 @@
 # Compost Mod
-With this mod, you are able to compost grass, leaves, flowers...
+This mod allows you to compost grass, leaves, flowers...
 
 ## License
 see LICENSE.txt
