@@ -26,6 +26,30 @@ function compost.can_compost(name)
 	end
 end
 
+local function infotext(num, name)
+	if num == 0 then
+		return "owner: "..name.."\nhold leaves and punch to start!"
+	elseif num == 1 or num == 2 then
+		return "owner: "..name.."\nstage: "..num
+	elseif num == 3 then
+		return "owner: "..name.."\ncompost ready: punch to eject dirt!"
+	end
+end
+
+local function composter(pos)
+	local node_name = minetest.get_node(pos).name
+	local meta = minetest.get_meta(pos)
+	local owner = meta:get_string("owner")
+	if node_name == "compost:wood_barrel_1" then
+		minetest.swap_node(pos, {name = "compost:wood_barrel_2"})
+		meta:set_string("infotext", infotext(2, owner))
+		minetest.get_node_timer(pos):start(math.random(40,120))
+	elseif node_name == "compost:wood_barrel_2" then
+		minetest.swap_node(pos, {name = "compost:wood_barrel_3"})
+		meta:set_string("infotext", infotext(3, owner))
+	end
+end
+
 -- grass
 compost.register_item("default:grass_1")
 compost.register_item("default:junglegrass")
@@ -73,21 +97,42 @@ minetest.register_node("compost:wood_barrel", {
 	sounds =  default.node_sound_wood_defaults(),
 	on_punch = function(pos, node, puncher, pointed_thing)
 		local wielded_item = puncher:get_wielded_item():get_name()
-		if compost.can_compost(wielded_item) then
-			minetest.set_node(pos, {name = "compost:wood_barrel_1"})
+		if can_compost(wielded_item) then
+			local meta = minetest.get_meta(pos)
+			local name = meta:get_string("owner")
+			-- swap barrel
+			minetest.swap_node(pos, {name = "compost:wood_barrel_1"})
+			meta:set_string("infotext", infotext(1, name))
 			local w = puncher:get_wielded_item()
+			-- take item if not in creative mode
 			if not(minetest.setting_getbool("creative_mode")) then
 				w:take_item(1)
 				puncher:set_wielded_item(w)
 			end
+			-- initialise node timer 40-120 seconds
+			minetest.get_node_timer(pos):start(math.random(40,120))
 		end
-	end
+	end,
+	after_place_node = function(pos, placer, itemstack, pointed_thing)
+		local meta = minetest.get_meta(pos)
+		local name = placer:get_player_name()
+		meta:set_string("owner", name)
+		meta:set_string("infotext", infotext(0, name))
+	end,
+	can_dig = function(pos, player)
+		local meta = minetest.get_meta(pos)
+		local owner = meta:get_string("owner")
+		if player:get_player_name() == owner then
+			return true
+		end
+	end,
 })
 
 minetest.register_node("compost:wood_barrel_1", {
 	description = "Wood Barrel with compost",
 	tiles = {"default_wood.png^compost_compost_1.png", "default_wood.png"},
 	drawtype = "nodebox",
+	on_timer = composter,
 	node_box = {
 		type = "fixed",
 		fixed = {{-1/2, -1/2, -1/2, 1/2, -3/8, 1/2},
@@ -99,14 +144,15 @@ minetest.register_node("compost:wood_barrel_1", {
 	},
 	paramtype = "light",
 	is_ground_content = false,
-	groups = {choppy = 3},
-	sounds =  default.node_sound_wood_defaults(),
+	groups = {not_in_creative_inventory = 1},
+	sounds =  default.node_sound_wood_defaults()
 })
 
 minetest.register_node("compost:wood_barrel_2", {
 	description = "Wood Barrel with compost",
 	tiles = {"default_wood.png^compost_compost_2.png", "default_wood.png"},
 	drawtype = "nodebox",
+	on_timer = composter,
 	node_box = {
 		type = "fixed",
 		fixed = {{-1/2, -1/2, -1/2, 1/2, -3/8, 1/2},
@@ -118,8 +164,8 @@ minetest.register_node("compost:wood_barrel_2", {
 	},
 	paramtype = "light",
 	is_ground_content = false,
-	groups = {choppy = 3},
-	sounds =  default.node_sound_wood_defaults(),
+	groups = {not_in_creative_inventory = 1},
+	sounds =  default.node_sound_wood_defaults()
 })
 
 minetest.register_node("compost:wood_barrel_3", {
@@ -137,31 +183,21 @@ minetest.register_node("compost:wood_barrel_3", {
 	},
 	paramtype = "light",
 	is_ground_content = false,
-	groups = {choppy = 3},
+	groups = {not_in_creative_inventory = 1},
 	sounds =  default.node_sound_wood_defaults(),
 	on_punch = function(pos, node, player, pointed_thing)
-		local p = {x = pos.x + math.random(0, 5)/5 - 0.5, y = pos.y+1, z = pos.z + math.random(0, 5)/5 - 0.5}
-		minetest.add_item(p, {name = "compost:compost"})
-		minetest.set_node(pos, {name = "compost:wood_barrel"})
+		local meta = minetest.get_meta(pos)
+		local owner = meta:get_string("owner")
+		if player:get_player_name() ~= owner then return end
+		local p = {
+			x = pos.x + math.random(0, 5)/5 - 0.5,
+			y = pos.y+1,
+			z = pos.z + math.random(0, 5)/5 - 0.5
+		}
+		minetest.add_item(p, {name = "default:dirt"})
+		minetest.swap_node(pos, {name = "compost:wood_barrel"})
+		meta:set_string("infotext", infotext(0, owner))
 	end
-})
-
-minetest.register_abm({
-	nodenames = {"compost:wood_barrel_1"},
-	interval = 30,
-	chance = 5,
-	action = function(pos, node, active_object_count, active_object_count_wider)
-		minetest.set_node(pos, {name = "compost:wood_barrel_2"})
-	end,
-})
-
-minetest.register_abm({
-	nodenames = {"compost:wood_barrel_2"},
-	interval = 30,
-	chance = 3,
-	action = function(pos, node, active_object_count, active_object_count_wider)
-		minetest.set_node(pos, {name = "compost:wood_barrel_3"})
-	end,
 })
 
 minetest.register_craft({
